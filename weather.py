@@ -1,12 +1,16 @@
+from datetime import datetime
+
 import requests
 from rich import print as rprint
 from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.table import Table
 
 console = Console()
 
+# The map for translating weather codes to readable text and emojis
 WEATHER_MAP = {
     0: "Clear sky ☀️",
     1: "Mainly clear 🌤️",
@@ -39,64 +43,119 @@ WEATHER_MAP = {
 }
 
 
-def get_weather():
+def get_location(cityname):
+    # Searching the API for the name of a city specified
+    geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cityname}&count=1"
+    try:
+        # Search through the API in json for whatever the fuck
+        response = requests.get(geo_url).json()
+        if "results" in response:
+            return response["results"][0]
+    except Exception as e:
+        # if didnt connect to API correctly
+        rprint(f"[bold red]Error connecting to API: {e}[/bold red]")
+        return None
+    return None
+
+
+def show_current_weather():
     console.clear()
     cityname = Prompt.ask("[bold cyan]Enter the city name[/bold cyan]")
 
-    with console.status("[bold yellow]Searching for location...[/bold yellow]"):
-        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cityname}&count=1"  # Searching the API for the name of a city specified
-        try:
-            geo_data = requests.get(
-                geo_url
-            ).json()  # Search through the API in json for whatever the fuck
-        except Exception as e:
-            rprint(
-                f"[bold red]Error connecting to API: {e}[/bold red]"
-            )  # if didnt connect to API correctly
-            return
+    with console.status("[bold yellow]Searching...[/bold yellow]]\n"):
+        res = get_location(
+            cityname
+        )  # Search for latitude and longitude of the city specified
 
-    if "results" in geo_data:  # Search for latitude and longitude of the city specified
-        res = geo_data["results"][0]
-        lat, lon = res["latitude"], res["longitude"]
-
-        with console.status("[bold blue]Fetching weather data...[/bold blue]"):
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit"  # After latitute and longtitude of the city is found it searches a location with that latitude and longtitude for the weather and temperature
+        if res:
+            lat, lon = res["latitude"], res["longitude"]
+            # After latitute and longtitude of the city is found it searches a location with that latitude and longtitude for the weather and temperature
+            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit"
             weather_data = requests.get(weather_url).json()
-        # Tells the script how to find the temperature and translate it to Celsius from fahrenheit and how to find the weather from the weather codes (etc, 67: Heavy Freezing Rain)
-        temp_f = weather_data["current"]["temperature_2m"]
-        temp_c = (temp_f - 32) * 5 / 9
-        code = weather_data["current"]["weather_code"]
-        status = WEATHER_MAP.get(code, "Unknown")
 
-        # UI for result
-        weather_info = (
-            f"[bold yellow]City:[/bold yellow] {res['name']}, {res.get('country', '')}\n"
-            f"[bold yellow]Coordinates:[/bold yellow] {lat}, {lon}\n"
-            f"---------------------------\n"
-            f"[bold green]Temp Celsius:[/bold green]    {temp_c:.1f}°C\n"
-            f"[bold green]Temp Fahrenheit:[/bold green] {temp_f:.1f}°F\n"
-            f"[bold green]Condition:[/bold green]       {status}"
-        )
-        rprint(
-            Panel(
-                weather_info,
-                title="[bold magenta]Weather Results[/bold magenta]",
-                expand=False,
+            # Tells the script how to find the temperature and translate it to Celsius from fahrenheit
+            temp_f = weather_data["current"]["temperature_2m"]
+            temp_c = (temp_f - 32) * 5 / 9
+
+            # how to find the weather from the weather codes (etc, 67: Heavy Freezing Rain)
+            code = weather_data["current"]["weather_code"]
+            status = WEATHER_MAP.get(code, "Unknown")
+
+            # UI for result
+            weather_info = (
+                f"[bold yellow]City:[/bold yellow] {res['name']}, {res.get('country', '')}\n"
+                f"[bold yellow]Coordinates:[/bold yellow] {lat}, {lon}\n"
+                f"---------------------------\n"
+                f"[bold green]Temp Celsius:[/bold green]    {temp_c:.1f}°C\n"
+                f"[bold green]Temp Fahrenheit:[/bold green] {temp_f:.1f}°F\n"
+                f"[bold green]Condition:[/bold green]       {status}"
             )
-        )
-    else:
-        rprint(
-            Panel(
-                f"[bold red]Could not find '{cityname}'. Please try again.[/bold red]"
+            rprint(
+                Panel(
+                    weather_info,
+                    title="[bold magenta]Current Weather Results[/bold magenta]",
+                    expand=False,
+                )
             )
-        )
+        else:
+            rprint(
+                Panel(f"[bold red]Could not find '{cityname}'. fuck you.[/bold red]")
+            )
 
 
-def main_menu():  # Loop for the program so it doesn't abruptly stop and you can rerun it without having to do python3 weather.py
+def show_forecast():
+    console.clear()
+    cityname = Prompt.ask("[bold cyan]Enter city for 7-day forecast[/bold cyan]")
+
+    with console.status("[bold blue]Fetching forecast...[/bold blue]"):
+        res = get_location(
+            cityname
+        )  # Search for latitude and longitude of the city specified
+
+        if res:
+            lat, lon = res["latitude"], res["longitude"]
+            # This is where I am gonna put the 7 day future broadcast.
+            forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto"
+            data = requests.get(forecast_url).json()
+
+            table = Table(
+                title=f"7-Day Forecast for {res['name']}",
+                show_header=True,
+                header_style="bold magenta",
+            )
+            table.add_column("Date", style="dim")
+            table.add_column("Condition")
+            table.add_column("High (°F)", justify="right")
+            table.add_column("Low (°F)", justify="right")
+
+            daily = data["daily"]
+            for i in range(len(daily["time"])):
+                date_str = daily["time"][i]
+                # Format date to be more readable (e.g., Mon, Jan 26)
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%a, %b %d")
+
+                condition = WEATHER_MAP.get(daily["weather_code"][i], "Unknown")
+                high = daily["temperature_2m_max"][i]
+                low = daily["temperature_2m_min"][i]
+
+                table.add_row(formatted_date, condition, f"{high}°", f"{low}°")
+
+            rprint(table)
+        else:
+            rprint(
+                Panel(f"[bold red]Could not find '{cityname}'. fuck you.[/bold red]")
+            )
+
+
+def main_menu():
+    # Loop for the program so it doesn't abruptly stop and you can rerun it without having to do python3 weather.py
     while True:
         console.clear()
         # Display Menu
-        menu_text = "[1] 🌡️  Check Temperature & Weather\n" "[2] ❌  Exit"
+        menu_text = (
+            "[1] 🌡️  Check Current Weather\n" "[2] 📅  7-Day Forecast\n" "[3] ❌  Exit"
+        )
         rprint(
             Panel(
                 Align.center(menu_text),
@@ -105,15 +164,20 @@ def main_menu():  # Loop for the program so it doesn't abruptly stop and you can
             )
         )
 
-        choice = Prompt.ask("Select an option", choices=["1", "2"])
+        choice = Prompt.ask("Select an option", choices=["1", "2", "3"])
 
         if choice == "1":
-            get_weather()
+            show_current_weather()
             input("\nPress Enter to return to the menu...")
         elif choice == "2":
+            show_forecast()
+            input("\nPress Enter to return to the menu...")
+        elif choice == "3":
             rprint("[bold red]Exiting... Goodbye![/bold red]")
             break
 
 
 if __name__ == "__main__":
     main_menu()
+
+    # Intergrate this with a tui map
