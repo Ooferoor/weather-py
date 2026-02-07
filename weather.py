@@ -111,7 +111,7 @@ def show_current_weather():
                 f"[bold blue]Wind Speed:[/bold blue]      {wind_speed} mph\n"
                 f"[bold blue]Humidity:[/bold blue]        {humidity}%\n"
                 f"[bold blue]Condition:[/bold blue]       {status}"
-            )
+            ))
 
             rprint(
                 Panel(
