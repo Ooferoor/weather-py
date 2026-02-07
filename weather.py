@@ -70,18 +70,16 @@ def show_current_weather():
         if res:
             lat, lon = res["latitude"], res["longitude"]
             # After latitute and longtitude of the city is found it searches a location with that latitude and longtitude for the weather and temperature
-<<<<<<< HEAD
             weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit"
-=======
             weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m&temperature_unit=fahrenheit"
->>>>>>> 53eae2a (Added feels like, changed colors also added humidity)
+
             weather_data = requests.get(weather_url).json()
 
             # Tells the script how to find the temperature and translate it to Celsius from fahrenheit
             temp_f = weather_data["current"]["temperature_2m"]
-<<<<<<< HEAD
+
             temp_c = (temp_f - 32) * 5 / 9
-=======
+
             feels_like_f = weather_data["current"]["apparent_temperature"]
 
             wind_speed = weather_data["current"]["wind_speed_10m"]
@@ -89,7 +87,7 @@ def show_current_weather():
 
             temp_c = (temp_f - 32) * 5 / 9
             feels_like_c = (feels_like_f - 32) * 5 / 9
->>>>>>> 53eae2a (Added feels like, changed colors also added humidity)
+
 
             # how to find the weather from the weather codes (etc, 67: Heavy Freezing Rain)
             code = weather_data["current"]["weather_code"]
@@ -102,13 +100,13 @@ def show_current_weather():
                 f"---------------------------\n"
                 f"[bold green]Temp Celsius:[/bold green]    {temp_c:.1f}°C\n"
                 f"[bold green]Temp Fahrenheit:[/bold green] {temp_f:.1f}°F\n"
-<<<<<<< HEAD
+
                 f"[bold green]Condition:[/bold green]       {status}"
             )
             rprint(
                 Panel(
                     weather_info,
-=======
+
                 f"[bold blue]Feels Like:[/bold blue]      {feels_like_f:.1f}°F ({feels_like_c:.1f}°C)\n"
                 f"[bold blue]Wind Speed:[/bold blue]      {wind_speed} mph\n"
                 f"[bold blue]Humidity:[/bold blue]        {humidity}%\n"
@@ -118,7 +116,6 @@ def show_current_weather():
             rprint(
                 Panel(
                     weather_info.strip(),
->>>>>>> 53eae2a (Added feels like, changed colors also added humidity)
                     title="[bold magenta]Current Weather Results[/bold magenta]",
                     expand=False,
                 )
@@ -131,13 +128,12 @@ def show_current_weather():
 
 def show_forecast():
     console.clear()
-<<<<<<< HEAD
+
     cityname = Prompt.ask("[bold cyan]Enter city for 7-day forecast[/bold cyan]")
-=======
+
     cityname = Prompt.ask(
-        "[bold cyan]Enter city for 7-day forecast (not sure on realiblity right now)[/bold red]"
+        "[bold cyan]Enter city for 7-day forecast (not sure on realiblity right now)[/bold cyan]"
     )
->>>>>>> 53eae2a (Added feels like, changed colors also added humidity)
 
     with console.status("[bold blue]Fetching forecast...[/bold blue]"):
         res = get_location(
@@ -147,11 +143,9 @@ def show_forecast():
         if res:
             lat, lon = res["latitude"], res["longitude"]
             # This is where I am gonna put the 7 day future broadcast.
-<<<<<<< HEAD
             forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto"
-=======
+
             forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto,apparent_temperature"
->>>>>>> 53eae2a (Added feels like, changed colors also added humidity)
             data = requests.get(forecast_url).json()
 
             table = Table(
